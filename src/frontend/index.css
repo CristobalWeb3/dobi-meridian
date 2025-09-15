@@ -1,8 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
+/* Base styles */
   :root {
     --background: 0 0% 97.65%;
     --foreground: 0 0% 12.55%;
@@ -57,15 +53,15 @@
     --chart-4: 28.5 64.52% 15.16%;
     --chart-5: 22.93 95.59% 52.35%;
   }
+
+/* Global styles */
+* {
+  border-color: #4b5563;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+body {
+  background-color: #111827;
+  color: #ffffff;
 }
 
 /* Force dark mode */
@@ -74,75 +70,115 @@
 }
 
 body {
-  @apply font-mono bg-background text-foreground;
+  font-family: 'Courier New', monospace;
+  background-color: #111827;
+  color: #ffffff;
 }
 
 /* Custom DOBI styles */
-@layer components {
-  .dobi-gradient {
-    background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
-  }
-  
-  .dobi-card {
-    @apply bg-gray-800 rounded-lg shadow-lg border border-gray-700;
-  }
-  
-  .dobi-button {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105;
-  }
-  
-  .dobi-button-primary {
-    @apply dobi-button bg-purple-600 hover:bg-purple-700 text-white;
-  }
-  
-  .dobi-button-secondary {
-    @apply dobi-button bg-gray-700 hover:bg-gray-600 text-white;
-  }
-  
-  .dobi-input {
-    @apply bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-purple-500 focus:outline-none transition-colors;
-  }
-  
-  .dobi-message-user {
-    @apply bg-blue-600 text-white max-w-xs lg:max-w-md px-4 py-2 rounded-lg;
-  }
-  
-  .dobi-message-dobi {
-    @apply bg-gray-700 text-gray-100 max-w-xs lg:max-w-md px-4 py-2 rounded-lg;
-  }
-  
-  .dobi-status-indicator {
-    @apply w-2 h-2 rounded-full;
-  }
-  
-  .dobi-status-online {
-    @apply dobi-status-indicator bg-green-400;
-  }
-  
-  .dobi-status-busy {
-    @apply dobi-status-indicator bg-yellow-400;
-  }
-  
-  .dobi-status-offline {
-    @apply dobi-status-indicator bg-red-400;
-  }
+.dobi-gradient {
+  background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
 }
 
-@layer utilities {
-  .text-gradient {
-    background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  .animate-bounce-slow {
-    animation: bounce 2s infinite;
-  }
+.dobi-card {
+  background-color: #1f2937;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #374151;
+}
+
+.dobi-button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  transform: scale(1);
+}
+
+.dobi-button:hover {
+  transform: scale(1.05);
+}
+
+.dobi-button-primary {
+  background-color: #7c3aed;
+  color: white;
+}
+
+.dobi-button-primary:hover {
+  background-color: #6d28d9;
+}
+
+.dobi-button-secondary {
+  background-color: #374151;
+  color: white;
+}
+
+.dobi-button-secondary:hover {
+  background-color: #4b5563;
+}
+
+.dobi-input {
+  background-color: #374151;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #4b5563;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.dobi-input:focus {
+  border-color: #8b5cf6;
+}
+
+.dobi-message-user {
+  background-color: #2563eb;
+  color: white;
+  max-width: 20rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+}
+
+.dobi-message-dobi {
+  background-color: #374151;
+  color: #f3f4f6;
+  max-width: 20rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+}
+
+.dobi-status-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.dobi-status-online {
+  background-color: #4ade80;
+}
+
+.dobi-status-busy {
+  background-color: #facc15;
+}
+
+.dobi-status-offline {
+  background-color: #f87171;
+}
+
+/* Utility classes */
+.text-gradient {
+  background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
 }
 
 /* Custom scrollbar */
@@ -151,15 +187,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-800;
+  background-color: #1f2937;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-600 rounded-full;
+  background-color: #4b5563;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-500;
+  background-color: #6b7280;
 }
 
 /* Loading animation */
@@ -190,4 +227,45 @@ body {
 
 .message-slide-in {
   animation: message-slide-in 0.3s ease-out;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* Glass morphism effects */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Enhanced gradients */
+.gradient-text {
+  background: linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Professional shadows */
+.shadow-professional {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
