@@ -1,4 +1,4 @@
-# DOBI Agent - ElizaOS Integration
+# DOBI Agent -
 
 ## Descripción
 
@@ -15,7 +15,7 @@ DOBI (Digital Object Business Intelligence) es un agente de IA innovador que int
 
 ## Tecnologías
 
-- **Backend**: ElizaOS Framework
+- **Backend**: Bun + SQLite
 - **Frontend**: React 18 + TypeScript
 - **Styling**: Tailwind CSS v4
 - **Blockchain**: Stellar/Soroban
