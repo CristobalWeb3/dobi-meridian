@@ -1,0 +1,31 @@
+{
+  "name": "dobi-frontend",
+  "version": "1.0.0",
+  "description": "DOBI - Device signal validation and auto-payment frontend",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000",
+    "build": "echo 'Static build - no build step required'",
+    "vercel-build": "echo 'Static build - no build step required'"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "smart-contracts",
+    "blockchain",
+    "energy",
+    "validation",
+    "rewards"
+  ],
+  "author": "DOBI Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/dobi-frontend"
+  },
+  "homepage": "https://dobi-frontend.vercel.app"
+}

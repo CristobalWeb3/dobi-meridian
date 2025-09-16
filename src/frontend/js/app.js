@@ -1,9 +1,12 @@
 // Main Application Logic for DOBI Dashboard
 // Handles UI interactions and orchestrates Web3 calls
 
+import { WalletManager } from './wallet.js';
+
 class DobiApp {
     constructor() {
         this.wallet = null;
+        this.lastValidationResult = null; // Track last validation result
         this.initializeElements();
         this.attachEventListeners();
         this.initializeApp();
@@ -29,23 +32,26 @@ class DobiApp {
         this.chatSendBtn = document.getElementById('chatSendBtn');
         this.chatMessages = document.getElementById('chatMessages');
         
+        // Header elements for RPC status
+        this.rpcDot = document.getElementById('rpcDot');
+        this.rpcStatus = document.getElementById('rpcStatus');
+        this.walletBtn = document.getElementById('walletBtn');
+        
         // Debug: Check if elements were found
-        console.log('🔍 Elements found:');
-        console.log('  - validSignalBtn:', !!this.validSignalBtn);
-        console.log('  - invalidSignalBtn:', !!this.invalidSignalBtn);
-        console.log('  - distributeRewardsBtn:', !!this.distributeRewardsBtn);
-        console.log('  - signalDisplay:', !!this.signalDisplay);
-        console.log('  - validationResult:', !!this.validationResult);
     }
 
     attachEventListeners() {
         // Signal validation buttons
         if (this.validSignalBtn) {
-            this.validSignalBtn.addEventListener('click', () => this.validateSignal(true));
+            this.validSignalBtn.addEventListener('click', () => {
+                this.validateSignal(true);
+            });
         }
         
         if (this.invalidSignalBtn) {
-            this.invalidSignalBtn.addEventListener('click', () => this.validateSignal(false));
+            this.invalidSignalBtn.addEventListener('click', () => {
+                this.validateSignal(false);
+            });
         }
         
         if (this.distributeRewardsBtn) {
@@ -63,10 +69,6 @@ class DobiApp {
             });
         }
 
-        // Initialize contracts
-        if (this.initContractsBtn) {
-            this.initContractsBtn.addEventListener('click', () => this.initializeContracts());
-        }
     }
 
     async initializeApp() {
@@ -75,21 +77,27 @@ class DobiApp {
             await new Promise(resolve => setTimeout(resolve, 100));
             
             this.wallet = new WalletManager();
-            console.log('DobiApp: WalletManager initialized');
+            window.walletManager = this.wallet;
+            
+            // Listen for wallet connection changes
+            document.addEventListener('walletConnected', () => {
+                this.checkWalletStatus();
+            });
+            
+            document.addEventListener('walletDisconnected', () => {
+                this.checkWalletStatus();
+            });
             
             // Initialize SorobanContractManager
             if (window.sorobanContractManager) {
                 await window.sorobanContractManager.initialize();
-                console.log('DobiApp: SorobanContractManager initialized');
-            } else {
-                console.error('DobiApp: SorobanContractManager not available');
             }
             
             await this.testAPIConnection();
             await this.updateRPCStatus();
+            await this.checkWalletStatus();
             setInterval(() => this.updateRPCStatus(), 10000);
         } catch (error) {
-            console.error('DobiApp initialization error:', error);
             this.showToast('App initialization failed', 'error');
         }
     }
@@ -110,14 +118,11 @@ class DobiApp {
             const contractsAccessible = await window.sorobanContractManager.testConnectivity();
             
             if (contractsAccessible) {
-                console.log('✅ All systems ready');
                 this.showToast('All systems ready', 'success');
         } else {
-                console.log('⚠️ Contracts not accessible, using mock mode');
                 this.showToast('Contracts not accessible, using mock mode', 'warning');
             }
         } catch (error) {
-            console.error('API connection test failed:', error);
             this.showToast('API connection test failed', 'error');
         }
     }
@@ -134,6 +139,31 @@ class DobiApp {
         } catch (error) {
             this.rpcDot.className = 'rpc-dot';
             this.rpcStatus.textContent = 'Connection error';
+        }
+    }
+
+    async checkWalletStatus() {
+        try {
+            // Check if wallet is connected
+            if (window.walletManager && window.walletManager.isConnected()) {
+                // Update distribute rewards button state
+                if (this.distributeRewardsBtn) {
+                    this.distributeRewardsBtn.disabled = false;
+                    this.distributeRewardsBtn.textContent = 'Validate on-chain & (auto) Pay';
+                }
+            } else {
+                // Wallet not connected
+                if (this.distributeRewardsBtn) {
+                    this.distributeRewardsBtn.disabled = true;
+                    this.distributeRewardsBtn.textContent = 'Please connect your wallet first';
+                }
+            }
+        } catch (error) {
+            // Error checking wallet status
+            if (this.distributeRewardsBtn) {
+                this.distributeRewardsBtn.disabled = true;
+                this.distributeRewardsBtn.textContent = 'Please connect your wallet first';
+            }
         }
     }
 
@@ -162,6 +192,9 @@ class DobiApp {
                 const status = result.validated ? 'Valid' : 'Invalid';
                 const message = `Signal validation ${status}! ${result.reason}`;
                 
+                // Store validation result for rewards distribution
+                this.lastValidationResult = result;
+                
                 this.showToast(message, result.validated ? 'success' : 'warning');
                 this.updateValidationResult(result);
                 this.addEvent('Validation', signalData.device_id, status, result.reason, result.txHash);
@@ -169,13 +202,20 @@ class DobiApp {
                 // Enable distribute rewards button if validation was successful
                 if (result.validated && this.distributeRewardsBtn) {
                     this.distributeRewardsBtn.disabled = false;
+                } else if (!result.validated && this.distributeRewardsBtn) {
+                    this.distributeRewardsBtn.disabled = true;
                 }
-        } else {
+                
+                // Add DOBI analysis for invalid signals
+                if (!result.validated) {
+                    this.addChatMessage('dobi', this.generateInvalidSignalAnalysis(signalData, result));
+                    }
+                } else {
                 this.showToast('Validation failed', 'error');
                 this.updateValidationResult({ validated: false, reason: 'Validation failed' });
+                this.lastValidationResult = { validated: false, reason: 'Validation failed' };
             }
         } catch (error) {
-            console.error('Validation error:', error);
             this.showToast(`Validation error: ${error.message}`, 'error');
             this.updateValidationResult({ validated: false, reason: error.message });
         }
@@ -186,15 +226,22 @@ class DobiApp {
             this.showToast('Please connect your wallet first', 'error');
             return;
         }
+        
+        // Check if last validation was successful
+        if (!this.lastValidationResult || !this.lastValidationResult.validated) {
+            this.showToast('Cannot distribute rewards - Last validation was not successful', 'error');
+            this.addChatMessage('dobi', '❌ **Rewards Distribution Blocked**\n\nCannot distribute rewards because the last signal validation was not successful. Please validate a signal first.');
+            return;
+        }
 
         try {
             this.showToast('Distributing rewards...', 'info');
             this.updateActivityDisplay('Processing payment...');
             
-            // Sample data for rewards distribution
-            const deviceId = 'EV-001';
+            // Use data from last validation
+            const deviceId = this.lastValidationResult.deviceId || 'EV-001';
             const validationTimestamp = Math.floor(Date.now() / 1000);
-            const energyKwh = 12.5;
+            const energyKwh = this.lastValidationResult.energyValidated || 12.5;
             const publicKey = window.walletManager.getPublicKey();
             
             // Call Rewards contract
@@ -206,86 +253,23 @@ class DobiApp {
             );
             
             if (result.success) {
-                this.showToast(`Rewards distributed: ${result.amount} XLM`, 'success');
+                const totalReward = parseFloat(result.amount);
+                const operatorReward = parseFloat(result.operatorReward);
+                const communityReward = parseFloat(result.communityReward);
+                
+                this.showToast(`Rewards distributed: ${totalReward} XLM (${operatorReward} to operator, ${communityReward} to community)`, 'success');
                 this.addActivityItem('Distributed', result.txHash);
                 this.addChatMessage('dobi', this.generateRewardsMessage(deviceId, result));
-                    } else {
+            } else {
                 this.showToast('Rewards distribution failed', 'error');
                 this.addActivityItem('Failed', null);
             }
         } catch (error) {
-            console.error('Rewards distribution error:', error);
             this.showToast(`Rewards error: ${error.message}`, 'error');
             this.updateActivityDisplay('Payment error');
         }
     }
 
-    async initializeContracts() {
-        if (!window.walletManager || !window.walletManager.isConnected()) {
-            this.showToast('Please connect your wallet first', 'error');
-            return;
-        }
-
-        if (!window.sorobanContractManager) {
-            this.showToast('Contract manager not initialized', 'error');
-            return;
-        }
-
-        this.initContractsBtn.disabled = true;
-        this.initContractsBtn.textContent = 'Initializing...';
-        this.showToast('Initializing contracts...', 'info');
-
-        try {
-            const publicKey = window.walletManager.getPublicKey();
-            
-            this.addChatMessage('dobi', '🚀 **Contract Initialization Started**\n\nInitializing both Oracle and Rewards contracts...');
-            
-            // Initialize Oracle
-            this.addChatMessage('dobi', '📋 Initializing DobiOracle contract...');
-            const oracleResult = await window.sorobanContractManager.initializeOracle(publicKey);
-            
-            if (oracleResult.success) {
-                this.addChatMessage('dobi', `✅ **Oracle Initialized Successfully!**\n\nTransaction: [${oracleResult.txHash}](${oracleResult.explorerUrl})`);
-            } else {
-                this.addChatMessage('dobi', '❌ **Oracle Initialization Failed**\n\nCheck the console for details.');
-            }
-            
-            // Initialize Rewards
-            this.addChatMessage('dobi', '💰 Initializing DobiRewards contract...');
-            const rewardsResult = await window.sorobanContractManager.initializeRewards(publicKey);
-            
-            if (rewardsResult.success) {
-                this.addChatMessage('dobi', `✅ **Rewards Initialized Successfully!**\n\nTransaction: [${rewardsResult.txHash}](${rewardsResult.explorerUrl})`);
-                } else {
-                this.addChatMessage('dobi', '❌ **Rewards Initialization Failed**\n\nCheck the console for details.');
-            }
-            
-            // Add validator
-            this.addChatMessage('dobi', '🔐 Adding wallet as validator...');
-            const validatorResult = await window.sorobanContractManager.addValidator(publicKey, publicKey);
-            
-            if (validatorResult.success) {
-                this.addChatMessage('dobi', `✅ **Validator Added Successfully!**\n\nTransaction: [${validatorResult.txHash}](${validatorResult.explorerUrl})`);
-            } else {
-                this.addChatMessage('dobi', '❌ **Validator Addition Failed**\n\nCheck the console for details.');
-            }
-            
-            if (oracleResult.success && rewardsResult.success) {
-                this.addChatMessage('dobi', '🎉 **All Contracts Initialized Successfully!**\n\nYour contracts are now ready to use. You can start validating signals and distributing rewards.');
-                this.showToast('Contracts initialized successfully!', 'success');
-            } else {
-                this.addChatMessage('dobi', '⚠️ **Partial Initialization**\n\nSome contracts may not have been initialized properly. Check the individual results above.');
-                this.showToast('Partial initialization completed', 'warning');
-            }
-        } catch (error) {
-            this.addChatMessage('dobi', `❌ **Initialization Error**\n\nAn error occurred during initialization:\n\n${error.message}\n\nCheck the browser console for more details.`);
-            this.showToast(`Initialization failed: ${error.message}`, 'error');
-            console.error('Contract initialization error:', error);
-        } finally {
-            this.initContractsBtn.disabled = false;
-            this.initContractsBtn.textContent = 'Initialize Contracts';
-        }
-    }
 
     sendChatMessage() {
         const input = this.chatInput;
@@ -309,7 +293,7 @@ class DobiApp {
             ];
             
             const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-            this.addChatMessage('DOBI', randomResponse, 'bot');
+            this.addChatMessage('DOBI', randomResponse, 'assistant');
         }, 1000);
         
         input.value = '';
@@ -477,15 +461,82 @@ class DobiApp {
 
     generateRewardsMessage(deviceId, result) {
         const mockIndicator = result.isMock ? ' (Mock)' : '';
+        const totalReward = parseFloat(result.amount);
+        const operatorReward = parseFloat(result.operatorReward);
+        const communityReward = parseFloat(result.communityReward);
+        const energyKwh = result.energyKwh || 0;
+        const rewardRate = result.rewardRate || 0.1;
         
         return `**Rewards Distributed**${mockIndicator}\n\n` +
                `**Device:** ${deviceId}\n` +
-               `**Amount:** ${result.amount} XLM\n` +
+               `**Energy Validated:** ${energyKwh} kWh\n` +
+               `**Reward Rate:** ${rewardRate} XLM per kWh\n` +
+               `**Total Reward:** ${totalReward} XLM\n` +
+               `**Operator (70%):** ${operatorReward} XLM\n` +
+               `**Community (30%):** ${communityReward} XLM\n` +
                `**Transaction:** [${result.txHash}](${result.explorerUrl})\n\n` +
-               `Rewards have been successfully distributed to the operator and community wallets.`;
+               `Rewards have been successfully distributed based on validated energy consumption.`;
+    }
+
+    generateInvalidSignalAnalysis(signalData, result) {
+        const mockIndicator = result.isMock ? ' (Mock Analysis)' : '';
+        
+        // Analyze the specific issues with the signal
+        let analysis = `**🔍 Signal Analysis${mockIndicator}**\n\n`;
+        analysis += `**Device:** ${signalData.device_id}\n`;
+        analysis += `**Timestamp:** ${new Date(signalData.timestamp).toLocaleString()}\n`;
+        analysis += `**Energy:** ${signalData.energy_kwh} kWh\n`;
+        analysis += `**Duration:** ${signalData.duration} seconds\n\n`;
+        
+        // Detailed analysis based on the validation result
+        analysis += `**❌ Validation Failed**\n\n`;
+        analysis += `**Reason:** ${result.reason}\n\n`;
+        
+        // Specific recommendations based on the type of error
+        if (signalData.energy_kwh <= 0) {
+            analysis += `**🔧 Recommendations:**\n`;
+            analysis += `• Check device sensors for proper calibration\n`;
+            analysis += `• Verify energy meter readings are within normal range\n`;
+            analysis += `• Ensure device is properly connected and functioning\n`;
+            analysis += `• Expected range: 0.1 - 50 kWh per session\n\n`;
+        } else if (signalData.duration <= 0) {
+            analysis += `**🔧 Recommendations:**\n`;
+            analysis += `• Verify charging session duration is properly recorded\n`;
+            analysis += `• Check timer functionality on the device\n`;
+            analysis += `• Ensure session start/stop events are properly triggered\n`;
+            analysis += `• Expected range: 1 - 1440 minutes per session\n\n`;
+        } else if (!signalData.device_id || signalData.device_id.length < 3) {
+            analysis += `**🔧 Recommendations:**\n`;
+            analysis += `• Verify device ID is properly configured\n`;
+            analysis += `• Check device registration in the system\n`;
+            analysis += `• Ensure device ID follows naming conventions\n`;
+            analysis += `• Expected format: EV-XXX (3+ characters)\n\n`;
+            } else {
+            analysis += `**🔧 Recommendations:**\n`;
+            analysis += `• Review all signal parameters for anomalies\n`;
+            analysis += `• Check data integrity and transmission quality\n`;
+            analysis += `• Verify device is operating within specifications\n`;
+            analysis += `• Contact technical support if issues persist\n\n`;
+        }
+        
+        analysis += `**⚠️ Impact:** No rewards will be distributed for this invalid signal.\n`;
+        analysis += `**✅ Next Steps:** Fix the identified issues and resubmit the signal.`;
+        
+        return analysis;
     }
 
     showToast(message, type = 'info') {
+        // Remove existing toasts to prevent overlap
+        const existingToasts = document.querySelectorAll('.toast');
+        existingToasts.forEach(toast => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    document.body.removeChild(toast);
+                }
+            }, 100);
+        });
+        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
@@ -498,12 +549,21 @@ class DobiApp {
         // Hide toast after 3 seconds
         setTimeout(() => {
             toast.classList.remove('show');
-            setTimeout(() => document.body.removeChild(toast), 300);
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
         }, 3000);
     }
 }
 
-// Initialize app when DOM is ready
+// Export DobiApp class
+export { DobiApp };
+
+// Initialize app when DOM is ready (fallback)
 document.addEventListener('DOMContentLoaded', () => {
+    if (!window.dobiApp) {
             window.dobiApp = new DobiApp();
+    }
 });

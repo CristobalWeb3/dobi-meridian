@@ -24,34 +24,27 @@ class WalletManager {
         this.balanceText = document.getElementById('wallet-balance');
         this.copyBtn = document.getElementById('copy-address');
         
-        // Debug: Check if buttons were found
-        if (!this.connectBtn) {
-            console.error('WalletManager: walletBtn not found in DOM');
-        } else {
-            console.log('WalletManager: walletBtn found and ready');
-        }
-        
-        if (!this.disconnectBtn) {
-            console.error('WalletManager: disconnectBtn not found in DOM');
-        } else {
-            console.log('WalletManager: disconnectBtn found and ready');
-        }
     }
 
     attachEventListeners() {
-        if (this.connectBtn) {
-            this.connectBtn.addEventListener('click', () => this.connectWallet());
-            console.log('WalletManager: Event listener attached to walletBtn');
-        } else {
-            console.error('WalletManager: Cannot attach event listener - connectBtn is null');
+        if (this.connectBtn && this.connectBtn.parentNode) {
+            // Remove any existing listeners first by cloning the element
+            const newBtn = this.connectBtn.cloneNode(true);
+            this.connectBtn.parentNode.replaceChild(newBtn, this.connectBtn);
+            this.connectBtn = newBtn;
+            
+            // Add the appropriate listener based on connection state
+            if (this.isWalletConnected) {
+                this.connectBtn.addEventListener('click', () => this.disconnectWallet());
+            } else {
+                this.connectBtn.addEventListener('click', () => this.connectWallet());
+            }
         }
         
         if (this.disconnectBtn) {
             this.disconnectBtn.addEventListener('click', () => this.disconnectWallet());
-            console.log('WalletManager: Event listener attached to disconnectBtn');
-        } else {
-            console.error('WalletManager: Cannot attach event listener - disconnectBtn is null');
         }
+        
         if (this.copyBtn) {
             this.copyBtn.addEventListener('click', () => this.copyAddress());
         }
@@ -73,6 +66,9 @@ class WalletManager {
                 if (savedConnection) {
                     await this.connectWallet();
                 }
+                
+                // Force UI update after checking connection
+                this.updateWalletUI();
             } else {
                 this.showStatus('Freighter wallet not detected. Please install Freighter extension and refresh the page.', 'error');
             }
@@ -81,32 +77,25 @@ class WalletManager {
         }
     }
 
-    async isFreighterAvailable() {
+    isFreighterAvailable() {
         // Check for Freighter API (official way according to docs)
         if (typeof window.freighterApi !== 'undefined') {
-            try {
-                // Test if Freighter is actually available and responsive
-                const isConnected = await window.freighterApi.isConnected();
-                console.log('Freighter API available, isConnected:', isConnected);
-                return true; // API is available regardless of connection status
-            } catch (error) {
-                console.log('Freighter API error:', error);
-                return false;
-            }
+            return true; // API is available
         }
         
-        console.log('Freighter API not found. Please install Freighter extension from Chrome Web Store.');
+        // Also check for the older freighter object as fallback
+        if (typeof window.freighter !== 'undefined') {
+            return true;
+        }
         return false;
     }
 
     async connectWallet() {
-        console.log('WalletManager: connectWallet called');
         try {
             this.showStatus('Connecting to Freighter...', 'loading');
             
             // Check if Freighter is available
-            const isAvailable = await this.isFreighterAvailable();
-            console.log('WalletManager: Freighter available:', isAvailable);
+            const isAvailable = this.isFreighterAvailable();
             
             if (!isAvailable) {
                 this.showStatus('Freighter wallet not detected. Please install Freighter extension from Chrome Web Store.', 'error');
@@ -116,47 +105,90 @@ class WalletManager {
             let publicKey, network;
             
             // Use official Freighter API according to documentation
-            console.log('Using Freighter API');
             
-            // Check if already connected
-            const isConnected = await window.freighterApi.isConnected();
-            console.log('Freighter isConnected:', isConnected);
-            
-            if (isConnected) {
-                const publicKeyResult = await window.freighterApi.getPublicKey();
-                if (publicKeyResult && !publicKeyResult.error) {
-                    publicKey = publicKeyResult.publicKey;
-                    network = 'testnet';
-                    this.showStatus('Wallet already connected!', 'success');
+            try {
+                // Use the official Freighter API with fallback
+                let freighterApi = null;
+                let apiSource = '';
+                
+                if (typeof window.freighterApi !== 'undefined') {
+                    freighterApi = window.freighterApi;
+                    apiSource = 'window.freighterApi';
+                } else if (typeof window.freighter !== 'undefined') {
+                    freighterApi = window.freighter;
+                    apiSource = 'window.freighter';
                 } else {
-                    this.showStatus('Failed to get public key from connected wallet', 'error');
+                    this.showStatus('Freighter API not available. Please install Freighter extension.', 'error');
                     return false;
                 }
-            } else {
-                // Try to request connection if method is available
-                if (typeof window.freighterApi.requestAccess === 'function') {
-                    console.log('Requesting access to Freighter...');
-                    const result = await window.freighterApi.requestAccess();
-                    console.log('Freighter requestAccess result:', result);
-                    
-                    if (result && !result.error) {
-                        const publicKeyResult = await window.freighterApi.getPublicKey();
-                        if (publicKeyResult && !publicKeyResult.error) {
-                            publicKey = publicKeyResult.publicKey;
-                            network = 'testnet';
-                            this.showStatus('Wallet connected successfully!', 'success');
+                
+                
+                   // Check if already connected
+                   const isConnected = await freighterApi.isConnected();
+                   
+                   if (isConnected) {
+                       // Get public key from connected wallet
+                       const publicKeyResult = await freighterApi.getPublicKey();
+                       
+                       // Extract public key using helper method
+                       const extractedPublicKey = this.extractPublicKey(publicKeyResult);
+                       
+                       if (extractedPublicKey && !publicKeyResult?.error) {
+                           publicKey = extractedPublicKey;
+                           network = 'testnet';
+                           this.showStatus('Wallet connected!', 'success');
+                       } else {
+                           this.showStatus('Please create/import an account in Freighter extension.', 'error');
+                           return false;
+                       }
+                } else {
+                    // Try to request access if available
+                    if (typeof freighterApi.requestAccess === 'function') {
+                        const result = await freighterApi.requestAccess();
+                        
+                       if (result && !result.error) {
+                           const publicKeyResult = await freighterApi.getPublicKey();
+                           
+                           // Extract public key using helper method
+                           const extractedPublicKey = this.extractPublicKey(publicKeyResult);
+                           
+                           if (extractedPublicKey && !publicKeyResult?.error) {
+                               publicKey = extractedPublicKey;
+                               network = 'testnet';
+                               this.showStatus('Wallet connected successfully!', 'success');
+                           } else {
+                               this.showStatus('Please create/import an account in Freighter extension.', 'error');
+                               return false;
+                           }
                         } else {
-                            this.showStatus('Failed to get public key after connection', 'error');
+                            this.showStatus('Please connect manually in Freighter extension.', 'error');
                             return false;
                         }
                     } else {
-                        this.showStatus(`Wallet connection failed: ${result?.error || 'User cancelled or extension not available'}`, 'error');
-                        return false;
+                        // requestAccess not available, try direct connection
+                           try {
+                               const publicKeyResult = await freighterApi.getPublicKey();
+                               
+                               // Extract public key using helper method
+                               const extractedPublicKey = this.extractPublicKey(publicKeyResult);
+                               
+                               if (extractedPublicKey && !publicKeyResult?.error) {
+                                   publicKey = extractedPublicKey;
+                                   network = 'testnet';
+                                   this.showStatus('Wallet connected!', 'success');
+                               } else {
+                                   this.showStatus('Please open Freighter extension and create/import an account.', 'error');
+                                   return false;
+                               }
+                        } catch (error) {
+                            this.showStatus('Please open Freighter extension and create/import an account.', 'error');
+                            return false;
+                        }
                     }
-                } else {
-                    this.showStatus('Wallet not connected and requestAccess not available. Please connect manually in Freighter extension.', 'error');
-                    return false;
                 }
+            } catch (error) {
+                this.showStatus('Please open Freighter extension and create/import an account.', 'error');
+                return false;
             }
             
             // Update state
@@ -182,7 +214,6 @@ class WalletManager {
             return true;
 
         } catch (error) {
-            console.error('Wallet connection error:', error);
             // Handle specific error cases
             if (error.message?.includes('FREIGHTER_NOT_DETECTED')) {
                 this.showStatus('Freighter wallet not detected. Please install Freighter extension.', 'error');
@@ -196,18 +227,27 @@ class WalletManager {
     }
 
     async updateWalletUI() {
-        if (!this.connectBtn || !this.disconnectBtn) return;
+        if (!this.connectBtn) return;
         
-        // Update connect button text and style
-        this.connectBtn.textContent = `${this.publicKey.slice(0, 6)}...${this.publicKey.slice(-4)}`;
-        this.connectBtn.className = 'wallet-btn connected';
-        this.connectBtn.style.display = 'none'; // Hide connect button
-        
-        // Show disconnect button
-        this.disconnectBtn.style.display = 'inline-block';
-        
-        // Get and display balance
-        await this.updateBalance();
+        // Check if wallet is connected
+        if (this.isWalletConnected && this.publicKey) {
+            // Update connect button text and style for connected state
+            this.connectBtn.textContent = `${this.publicKey.slice(0, 6)}...${this.publicKey.slice(-4)}`;
+            this.connectBtn.className = 'wallet-btn connected';
+            
+            // Reattach event listeners with the correct state
+            this.attachEventListeners();
+            
+            // Get and display balance
+            await this.updateBalance();
+        } else {
+            // Update connect button text and style for disconnected state
+            this.connectBtn.textContent = 'Connect wallet';
+            this.connectBtn.className = 'wallet-btn';
+            
+            // Reattach event listeners with the correct state
+            this.attachEventListeners();
+        }
     }
 
     async updateBalance() {
@@ -238,6 +278,7 @@ class WalletManager {
     }
 
     disconnectWallet() {
+        
         // Clear wallet data
         this.isWalletConnected = false;
         this.publicKey = null;
@@ -248,12 +289,11 @@ class WalletManager {
         if (this.connectBtn) {
             this.connectBtn.textContent = 'Connect wallet';
             this.connectBtn.className = 'wallet-btn';
-            this.connectBtn.style.display = 'inline-block'; // Show connect button
+            this.connectBtn.removeAttribute('data-disconnect-handler');
         }
-
-        if (this.disconnectBtn) {
-            this.disconnectBtn.style.display = 'none'; // Hide disconnect button
-        }
+        
+        // Reattach event listeners (this will handle the button replacement)
+        this.attachEventListeners();
 
         // Clear storage
         localStorage.removeItem('dobi-wallet-connected');
@@ -328,6 +368,24 @@ class WalletManager {
         }
     }
 
+    // Helper method to extract public key from different response formats
+    extractPublicKey(publicKeyResult) {
+        if (!publicKeyResult) return null;
+        
+        // Try different possible formats
+        if (publicKeyResult.publicKey) {
+            return publicKeyResult.publicKey;
+        } else if (typeof publicKeyResult === 'string') {
+            return publicKeyResult;
+        } else if (publicKeyResult.key) {
+            return publicKeyResult.key;
+        } else if (publicKeyResult.address) {
+            return publicKeyResult.address;
+        }
+        
+        return null;
+    }
+
     dispatchWalletEvent(eventName, data = {}) {
         const event = new CustomEvent(eventName, { 
             detail: { 
@@ -379,15 +437,19 @@ class WalletManager {
         }
 
         try {
-            // Use official Freighter API
+            // Use the official Freighter API with fallback
+            let freighterApi = null;
+            
             if (typeof window.freighterApi !== 'undefined') {
-                const result = await window.freighterApi.signTransaction(xdr, 'testnet');
-                return result;
+                freighterApi = window.freighterApi;
+            } else if (typeof window.freighter !== 'undefined') {
+                freighterApi = window.freighter;
             } else {
-                // Fallback to alternative method
-                const result = await window.freighter.signTransaction(xdr, 'testnet');
-                return result;
+                throw new Error('Freighter API not available');
             }
+            
+            const result = await freighterApi.signTransaction(xdr, 'testnet');
+            return result;
         } catch (error) {
             throw error;
         }

@@ -1,166 +1,163 @@
 # DOBI Frontend
 
-Frontend moderno para el bot DOBI, especializado en Real-World Assets (RWA) y Decentralized Autonomous Machines (DAMs) en la red Stellar.
+Frontend para validación de señales de dispositivos y distribución automática de recompensas en la red Stellar usando contratos inteligentes Soroban.
+
+## 🚀 Características
+
+- **Conexión de Wallet**: Integración con Freighter Wallet
+- **Validación de Señales**: Validación de señales de dispositivos usando contrato Oracle
+- **Distribución de Recompensas**: Distribución automática de XLM usando contrato Rewards
+- **Chat con DOBI**: Asistente de análisis para señales inválidas
+- **Interfaz Moderna**: Diseño oscuro y responsivo
+
+## 🛠️ Tecnologías
+
+- **Frontend**: HTML5, CSS3, JavaScript ES6+
+- **Blockchain**: Stellar Network, Soroban Smart Contracts
+- **Wallet**: Freighter Wallet API
+- **Deploy**: Vercel
+
+## 📋 Contratos Desplegados
+
+- **DobiOracle**: `CDBGL47SEEVMCQAI43CCDYNLC5MRY2TM27PZY3TGYE7SZRQRX56JIUTE`
+- **DobiRewards**: `CCUB6RWU6563VVWT24V6HG45WZ6BQPH7PGYLS6JG7ZGDRGJBRWOICJ2U`
+
+## 🔧 Instalación
+
+### Prerrequisitos
+- Freighter Wallet instalado en el navegador
+- Cuenta en Stellar Testnet con XLM para fees
+
+### Desarrollo Local
+```bash
+# Clonar repositorio
+git clone <tu-repo-url>
+cd dobi-frontend
+
+# Instalar dependencias (opcional)
+npm install
+
+# Servidor local
+python -m http.server 8000
+
+# Abrir en navegador
+http://localhost:8000
+```
+
+## 🚀 Deploy en Vercel
+
+### Opción 1: Deploy Automático
+```bash
+# Instalar Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel --prod
+```
+
+### Opción 2: Deploy Manual
+1. Ve a [vercel.com/dashboard](https://vercel.com/dashboard)
+2. Click "New Project"
+3. Importa tu repositorio
+4. Deploy
 
 ## 📁 Estructura del Proyecto
 
 ```
-src/frontend/
-├── components/           # Componentes React organizados por funcionalidad
-│   ├── chat/            # Componentes del chat
-│   │   ├── ChatInterface.tsx
-│   │   ├── ChatMessage.tsx
-│   │   └── ChatInput.tsx
-│   ├── common/          # Componentes reutilizables
-│   │   ├── Button.tsx
-│   │   ├── Card.tsx
-│   │   ├── LoadingSpinner.tsx
-│   │   └── StatusBadge.tsx
-│   ├── layout/          # Componentes de layout
-│   │   └── Header.tsx
-│   ├── RWAValidator.tsx # Validador de RWA
-│   ├── DAMManager.tsx   # Gestor de DAMs
-│   └── StellarIntegration.tsx # Integración Stellar/Soroban
-├── hooks/               # Custom hooks
-│   ├── useDobiChat.ts
-│   └── useStellarAccount.ts
-├── types/               # Definiciones de tipos TypeScript
-│   └── index.ts
-├── utils/               # Utilidades y helpers
-│   ├── constants.ts
-│   └── helpers.ts
-├── index.tsx           # Punto de entrada principal
-├── index.css           # Estilos globales
-└── index.html          # Template HTML
+frontend/
+├── js/
+│   ├── app.js              # Lógica principal de la aplicación
+│   ├── wallet.js           # Gestión de wallet Freighter
+│   └── soroban-contracts.js # Interacciones con contratos
+├── index.html              # Archivo principal
+├── index.css               # Estilos
+├── .env.example            # Variables de entorno (template)
+├── vercel.json             # Configuración de Vercel
+└── package.json            # Metadatos del proyecto
 ```
 
-## 🎯 Características Principales
+## 🔧 Configuración
 
-### 1. **Chat Interface**
-- Conversación inteligente con DOBI
-- Respuestas contextuales sobre RWAs, DAMs y Stellar
-- Interfaz moderna con animaciones
+### Variables de Entorno
+Copia `.env.example` a `.env` y configura:
 
-### 2. **Validador de RWA**
-- Formulario completo para validar activos del mundo real
-- Análisis de confianza y puntuación de riesgo
-- Soporte para múltiples tipos de activos
-- Generación de reportes
+```env
+# Red Stellar
+NEXT_PUBLIC_STELLAR_NETWORK=testnet
+NEXT_PUBLIC_RPC=https://soroban-testnet.stellar.org
 
-### 3. **Gestor de DAMs**
-- Monitoreo en tiempo real de dispositivos
-- Dashboard con métricas de rendimiento
-- Sistema de mantenimiento programado
-- Gestión de tareas y alertas
-
-### 4. **Integración Stellar/Soroban**
-- Conexión con wallet Stellar
-- Gestión de contratos inteligentes
-- Ejecución de funciones de contrato
-- Historial de transacciones
-
-## 🛠️ Tecnologías Utilizadas
-
-- **React 18** - Framework principal
-- **TypeScript** - Tipado estático
-- **Tailwind CSS** - Estilos utilitarios
-- **TanStack Query** - Gestión de estado del servidor
-- **Vite** - Build tool y dev server
-
-## 📋 Convenciones de Código
-
-### Estructura de Componentes
-```typescript
-// 1. Imports
-import React from 'react';
-import { ComponentProps } from '../types';
-
-// 2. Interface del componente
-interface ComponentProps {
-  // props aquí
-}
-
-// 3. Componente principal
-const Component: React.FC<ComponentProps> = ({ ...props }) => {
-  // hooks
-  // handlers
-  // render
-};
-
-// 4. Export
-export default Component;
+# IDs de Contratos
+NEXT_PUBLIC_ORACLE_ID=CDBGL47SEEVMCQAI43CCDYNLC5MRY2TM27PZY3TGYE7SZRQRX56JIUTE
+NEXT_PUBLIC_REWARDS_ID=CCUB6RWU6563VVWT24V6HG45WZ6BQPH7PGYLS6JG7ZGDRGJBRWOICJ2U
 ```
 
-### Naming Conventions
-- **Componentes**: PascalCase (`ChatInterface`)
-- **Hooks**: camelCase con prefijo `use` (`useDobiChat`)
-- **Archivos**: PascalCase para componentes, camelCase para utilidades
-- **Carpetas**: kebab-case (`chat-interface`)
+## 🎯 Uso
 
-### Estructura de Carpetas
-- **components/**: Organizados por funcionalidad
-- **hooks/**: Custom hooks reutilizables
-- **types/**: Definiciones de tipos centralizadas
-- **utils/**: Funciones de utilidad y constantes
+### 1. Conectar Wallet
+- Click en "Connect wallet"
+- Autorizar en Freighter
+- Verificar conexión
 
-## 🎨 Sistema de Diseño
+### 2. Enviar Señales
+- **VALID**: Envía señal válida para validación
+- **INVALID**: Envía señal inválida para testing
 
-### Colores
-- **Primary**: Purple (#8B5CF6)
-- **Secondary**: Blue (#3B82F6)
-- **Success**: Green (#10B981)
-- **Warning**: Yellow (#F59E0B)
-- **Error**: Red (#EF4444)
+### 3. Distribuir Recompensas
+- Botón se desbloquea tras validación exitosa
+- Distribuye XLM automáticamente
 
-### Componentes Base
-- **Button**: Variantes primary, secondary, outline, ghost, danger
-- **Card**: Variantes default, elevated, outlined, filled
-- **StatusBadge**: Indicadores de estado con colores y iconos
-- **LoadingSpinner**: Indicadores de carga en diferentes tamaños
+### 4. Chat con DOBI
+- Análisis automático de señales inválidas
+- Recomendaciones y troubleshooting
 
-## 🔧 Desarrollo
+## 🔍 Funcionalidades Técnicas
 
-### Instalación
-```bash
-npm install
-```
+### Validación de Señales
+- Hash de datos del dispositivo
+- Validación en contrato Oracle
+- Fallback a mock para testing
 
-### Desarrollo
-```bash
-npm run dev
-```
+### Distribución de Recompensas
+- Cálculo automático de recompensas
+- Distribución a operador y comunidad
+- Transacciones en Stellar testnet
 
-### Build
-```bash
-npm run build
-```
+### Gestión de Wallet
+- Conexión/desconexión automática
+- Monitoreo de estado
+- Manejo de errores
 
-### Linting
-```bash
-npm run lint
-```
+## 🐛 Troubleshooting
 
-## 📝 Próximas Mejoras
+### Wallet no conecta
+- Verificar que Freighter esté instalado
+- Verificar que esté en testnet
+- Refrescar página
 
-1. **Integración Real con APIs**
-   - Conectar con backend DOBI
-   - Integrar con Stellar Horizon API
-   - Implementar autenticación
+### Contratos no responden
+- Verificar IDs en `.env`
+- Verificar conectividad a Stellar
+- Revisar consola del navegador
 
-2. **Funcionalidades Adicionales**
-   - Dashboard de analytics
-   - Notificaciones en tiempo real
-   - Modo offline
+### Deploy falla
+- Verificar `vercel.json`
+- Verificar que no hay archivos sensibles
+- Revisar logs de Vercel
 
-3. **Optimizaciones**
-   - Lazy loading de componentes
-   - Memoización de componentes pesados
-   - Optimización de bundle
+## 📊 Estado del Proyecto
 
-## 🤝 Contribución
+- ✅ **Frontend**: Completado
+- ✅ **Wallet Integration**: Funcional
+- ✅ **Smart Contracts**: Desplegados en testnet
+- ✅ **Deploy**: Configurado para Vercel
+- ✅ **Testing**: Mock mode disponible
 
-1. Sigue las convenciones de código establecidas
-2. Añade tipos TypeScript para todas las props
-3. Documenta componentes complejos
-4. Escribe tests para nuevas funcionalidades
-5. Mantén la estructura de carpetas organizada
+## 🔗 Enlaces Útiles
+
+- **Stellar Expert**: [Ver contratos](https://stellar.expert/explorer/testnet)
+- **Freighter Wallet**: [Instalar](https://freighter.app)
+- **Soroban Docs**: [Documentación](https://soroban.stellar.org)
+
+## 📝 Licencia
+
+MIT License - Ver archivo LICENSE para detalles.

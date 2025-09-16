@@ -425,6 +425,9 @@
             opacity: 0;
             transform: translateX(100%);
             transition: all 0.3s;
+            margin-bottom: 0.5rem;
+            max-width: 300px;
+            word-wrap: break-word;
         }
 
         .toast.show {
@@ -466,7 +469,6 @@
                         <span id="rpcStatus">Online</span>
                         <span>Stellar Testnet</span>
                     </div>
-                    <a href="test-freighter.html" class="wallet-btn" style="text-decoration: none; margin-right: 0.5rem;">Test Freighter</a>
                     <button class="wallet-btn" id="walletBtn">Connect wallet</button>
                 </div>
             </div>
@@ -573,41 +575,51 @@
     
     <!-- Freighter API - Using CDNJS as per official documentation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-freighter-api/1.7.1/index.min.js"></script>
+    <script>
+        // Wait for Freighter API to be available
+        function waitForFreighterApi() {
+            return new Promise((resolve) => {
+                if (typeof window.freighterApi !== 'undefined') {
+                    resolve();
+                } else {
+                    setTimeout(() => waitForFreighterApi().then(resolve), 100);
+                }
+            });
+        }
+    </script>
     
     <script>
         // Wait for StellarSdk to be available before loading modules
         function waitForStellarSdk() {
             return new Promise((resolve) => {
                 if (typeof window.StellarSdk !== 'undefined') {
-                    console.log('✅ StellarSdk loaded successfully');
                     resolve();
                 } else {
-                    console.log('⏳ Waiting for StellarSdk to load...');
                     setTimeout(() => waitForStellarSdk().then(resolve), 100);
                 }
             });
         }
         
-        waitForStellarSdk().then(async () => {
-            console.log('🚀 Loading application modules...');
-            // Load modules after StellarSdk is ready
+        Promise.all([waitForStellarSdk(), waitForFreighterApi()]).then(async () => {
+            // Load modules after both StellarSdk and Freighter API are ready
             await import('./js/wallet.js');
-            console.log('✅ Wallet module loaded');
             
-            await import('./js/soroban-contracts.js');
-            console.log('✅ Soroban contracts module loaded');
+            const { SorobanContractManager } = await import('./js/soroban-contracts.js');
             
-            await import('./js/app.js');
-                console.log('✅ App module loaded successfully');
+            // Initialize SorobanContractManager globally
+            window.sorobanContractManager = new SorobanContractManager();
             
-                // Ensure DOM is ready
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        console.log('✅ DOM fully loaded after module import');
-                    });
-                } else {
-                    console.log('✅ DOM already loaded');
-                }
+            const { DobiApp } = await import('./js/app.js');
+            
+            // Initialize the app immediately after modules are loaded
+            window.dobiApp = new DobiApp();
+            
+            // Ensure DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                });
+            } else {
+            }
         });
     </script>
 </body>
