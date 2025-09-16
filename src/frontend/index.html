@@ -1,19 +1,614 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DOBI - AI Agent para RWA & DAMs</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOBI Demo - Real-World Assets Validation</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #0a0a0a;
+            color: #fafafa;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header */
+        .header {
+            border-bottom: 1px solid #262626;
+            padding: 1rem 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%);
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: #a3a3a3;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .network-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .rpc-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .rpc-dot.green { background-color: #22c55e; }
+        .rpc-dot.yellow { background-color: #eab308; }
+        .rpc-dot.red { background-color: #ef4444; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .wallet-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .wallet-btn.connected {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: 1px solid #10b981;
+        }
+
+        .wallet-btn.connected:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: #171717;
+            border: 1px solid #262626;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #f5f5f5;
+        }
+
+        /* Signal Controls */
+        .signal-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-valid {
+            background: #059669;
+            color: white;
+        }
+
+        .btn-valid:hover {
+            background: #047857;
+        }
+
+        .btn-invalid {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-invalid:hover {
+            background: #b91c1c;
+        }
+
+        .btn-primary {
+            background: white;
+            color: black;
+            width: 100%;
+            padding: 0.75rem 1rem;
+        }
+
+        .btn-primary:hover {
+            background: #e5e5e5;
+        }
+
+        .btn-primary:disabled {
+            background: #262626;
+            color: #737373;
+            cursor: not-allowed;
+        }
+
+        /* Signal Display */
+        .signal-display {
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 0.5rem;
+        }
+
+        .signal-hash {
+            font-size: 0.75rem;
+            color: #737373;
+        }
+
+        /* Validation Result */
+        .validation-result {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-result.pending {
+            background: #1f2937;
+            color: #9ca3af;
+        }
+
+        .validation-result.valid {
+            background: #064e3b;
+            color: #34d399;
+        }
+
+        .validation-result.rejected {
+            background: #7f1d1d;
+            color: #f87171;
+        }
+
+        .validation-reason {
+            font-size: 0.75rem;
+            color: #a3a3a3;
+            margin-bottom: 0.25rem;
+        }
+
+        .validation-timestamp {
+            font-size: 0.75rem;
+            color: #737373;
+        }
+
+        /* Activity List */
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border: 1px solid #262626;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .activity-type {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .activity-type.validated {
+            background: rgba(4, 70, 40, 0.3);
+            color: #34d399;
+        }
+
+        .activity-type.distributed {
+            background: rgba(29, 78, 216, 0.3);
+            color: #60a5fa;
+        }
+
+        .activity-type.rejected {
+            background: rgba(159, 18, 57, 0.3);
+            color: #f87171;
+        }
+
+        .activity-link {
+            color: #60a5fa;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .activity-link:hover {
+            color: white;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: #737373;
+        }
+
+        /* Events Table */
+        .events-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .events-table th,
+        .events-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #262626;
+        }
+
+        .events-table th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #a3a3a3;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .events-table td {
+            font-size: 0.75rem;
+        }
+
+        .event-type {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        /* Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #0a0a0a;
+            border: 1px solid #262626;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+        }
+
+        .chat-message.user {
+            text-align: right;
+        }
+
+        .chat-message.dobi {
+            text-align: left;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #262626;
+            border: 1px solid #404040;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            color: white;
+            font-size: 0.875rem;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .chat-send {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .chat-send:hover {
+            background: #1d4ed8;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: #1f2937;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .toast.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .toast.info {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">D</div>
+                    <div class="logo-text">
+                        <h1>DOBI</h1>
+                        <p>Device signal → on-chain validation → auto-payment</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="network-status">
+                        <div class="rpc-dot green" id="rpcDot"></div>
+                        <span id="rpcStatus">Online</span>
+                        <span>Stellar Testnet</span>
+                    </div>
+                    <a href="test-freighter.html" class="wallet-btn" style="text-decoration: none; margin-right: 0.5rem;">Test Freighter</a>
+                    <button class="wallet-btn" id="walletBtn">Connect wallet</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="grid">
+                <!-- Left Column -->
+                <div>
+                    <!-- Signal Controls -->
+                    <div class="card">
+                        <h3>Simulate Device Signal</h3>
+                        <div class="signal-controls">
+                            <button class="btn btn-valid" id="validSignalBtn">Send VALID signal</button>
+                            <button class="btn btn-invalid" id="invalidSignalBtn">Send INVALID signal</button>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #a3a3a3; margin-top: 0.5rem;">
+                            Generates a sample payload from device <strong>ev-001</strong>.
+                        </p>
+                    </div>
+
+                    <!-- Validation Action -->
+                    <div class="card">
+                        <h3>Actions</h3>
+                        <button class="btn btn-primary" id="distributeRewardsBtn" disabled>
+                            Validate on-chain & (auto) Pay
+                        </button>
+                        <p style="font-size: 0.75rem; color: #a3a3a3; margin-top: 0.5rem;">
+                            Calls <code>DobiOracle.commit</code> and, if valid, <code>DobiRewards.distribute</code>.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div>
+                    <!-- Device Signal -->
+                    <div class="card">
+                        <h3>Device Signal</h3>
+                        <div class="signal-display" id="signalDisplay">// No signal yet</div>
+                        <div class="signal-hash" id="signalHash"></div>
+                    </div>
+
+                    <!-- Validation Result -->
+                    <div class="card">
+                        <h3>Validation Result</h3>
+                        <div class="validation-result pending" id="validationResult">— Pending —</div>
+                        <div class="validation-reason" id="validationReason"></div>
+                        <div class="validation-timestamp" id="validationTimestamp"></div>
+                    </div>
+
+                    <!-- On-chain Activity -->
+                    <div class="card">
+                        <h3>On-chain Activity</h3>
+                        <div class="activity-list" id="activityDisplay">
+                            <div style="color: #a3a3a3; font-size: 0.75rem;">No transactions yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events & Receipts Table -->
+            <div class="card">
+                <h3>Events & Receipts</h3>
+                <table class="events-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Device</th>
+                            <th>Type</th>
+                            <th>Details</th>
+                            <th>TxID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <!-- Events will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Chat with DOBI -->
+            <div class="card">
+                <h3>Chat with DOBI</h3>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-message dobi">
+                            <strong>DOBI:</strong> Hello! I'm DOBI, your AI assistant for Real-World Assets validation. I can help you check validation status, transaction history, and device data. Try asking about EV-001 validations or recent transactions.
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask DOBI about RWAs, DAMs, Stellar...">
+                        <button class="chat-send" id="chatSendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- Stellar SDK v11+ with Soroban support -->
+    <script src="https://unpkg.com/@stellar/stellar-sdk@11.3.0/dist/stellar-sdk.min.js"></script>
+    
+    <!-- Freighter API - Using CDNJS as per official documentation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-freighter-api/1.7.1/index.min.js"></script>
+    
     <script>
-      // This will be injected by the server in production
-      window.ELIZA_CONFIG = {
-        agentId: 'test-agent-id',
-        apiBase: 'http://localhost:3000',
-      };
+        // Wait for StellarSdk to be available before loading modules
+        function waitForStellarSdk() {
+            return new Promise((resolve) => {
+                if (typeof window.StellarSdk !== 'undefined') {
+                    console.log('✅ StellarSdk loaded successfully');
+                    resolve();
+                } else {
+                    console.log('⏳ Waiting for StellarSdk to load...');
+                    setTimeout(() => waitForStellarSdk().then(resolve), 100);
+                }
+            });
+        }
+        
+        waitForStellarSdk().then(async () => {
+            console.log('🚀 Loading application modules...');
+            // Load modules after StellarSdk is ready
+            await import('./js/wallet.js');
+            console.log('✅ Wallet module loaded');
+            
+            await import('./js/soroban-contracts.js');
+            console.log('✅ Soroban contracts module loaded');
+            
+            await import('./js/app.js');
+                console.log('✅ App module loaded successfully');
+            
+                // Ensure DOM is ready
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        console.log('✅ DOM fully loaded after module import');
+                    });
+                } else {
+                    console.log('✅ DOM already loaded');
+                }
+        });
     </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+</body>
 </html>
